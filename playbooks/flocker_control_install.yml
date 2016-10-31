@@ -1,0 +1,64 @@
+---
+- name: Configure the control node
+  hosts: control
+  gather_facts: no
+  remote_user: ubuntu
+  become: yes
+  become_user: root
+  become_method: sudo
+
+  pre_tasks:
+    - name: Install python2
+      raw: sudo apt-get -y install python-simplejson
+
+  tasks:
+    - script: scripts/flocker-install-utils.sh
+
+    - copy:
+        src: "{{ item }}"
+        dest: /etc/flocker
+        owner: root
+        group: root
+        mode: 0600
+      with_items:
+        - ../files/agent.yml
+        - ../files/cluster.crt
+        - ../files/client.crt
+        - ../files/client.key
+        - ../files/control-service.crt
+        - ../files/control-service.key
+        - ../files/plugin.crt
+        - ../files/plugin.key
+
+    - copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: 0600
+      with_items:
+        - { src: '../files/node-aws-100.key', dest: '/etc/flocker/node.key' }
+        - { src: '../files/node-aws-100.crt', dest: '/etc/flocker/node.crt' }
+
+    - raw: "yes | ufw enable"
+    - raw: "echo 'docker                  2376/tcp               # Docker' >> /etc/services"
+    - raw: "echo 'flocker-control-api     4523/tcp               # Flocker Control API port' >> /etc/services"
+    - raw: "echo 'flocker-control-agent   4524/tcp               # Flocker Control Agent port' >> /etc/services"
+
+    - command: "{{ item }}"
+      with_items:
+        - "ufw allow ssh"
+        - "ufw allow docker"
+        - "ufw allow flocker-control-api"
+        - "ufw allow flocker-control-agent"
+
+    - service: name="{{ item }}" state=started
+      with_items:
+        - flocker-control
+        - flocker-dataset-agent
+        - flocker-container-agent
+        - flocker-docker-plugin
+
+    - service: name="{{ item }}" state=restarted
+      with_items:
+        - docker

@@ -1,0 +1,48 @@
+---
+- name: Configure the cluster nodes
+  hosts: nodes
+  gather_facts: yes
+  remote_user: ubuntu
+  become: yes
+  become_user: root
+  become_method: sudo
+
+  pre_tasks:
+    - name: Install python2
+      raw: sudo apt-get -y install python-simplejson
+
+  tasks:
+    - script: scripts/flocker-install-utils.sh
+
+    - copy:
+        src: "{{ item }}"
+        dest: /etc/flocker
+        owner: root
+        group: root
+        mode: 0600
+      with_items:
+        - ../files/agent.yml
+        - ../files/cluster.crt
+        - ../files/plugin.crt
+        - ../files/plugin.key
+
+    - copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: 0600
+      with_items:
+        - { src: '../files/node-{{ ansible_hostname }}.key', dest: '/etc/flocker/node.key' }
+        - { src: '../files/node-{{ ansible_hostname }}.crt', dest: '/etc/flocker/node.crt' }
+
+    - service: name="{{ item }}" state=started
+      with_items:
+        - flocker-control
+        - flocker-dataset-agent
+        - flocker-container-agent
+        - flocker-docker-plugin
+
+    - service: name="{{ item }}" state=restarted
+      with_items:
+        - docker
