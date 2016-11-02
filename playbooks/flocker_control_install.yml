@@ -1,7 +1,7 @@
 ---
 - name: Configure the control node
   hosts: control
-  gather_facts: no
+  gather_facts: yes
   remote_user: ubuntu
   become: yes
   become_user: root
@@ -37,8 +37,8 @@
         group: root
         mode: 0600
       with_items:
-        - { src: '../files/node-aws-100.key', dest: '/etc/flocker/node.key' }
-        - { src: '../files/node-aws-100.crt', dest: '/etc/flocker/node.crt' }
+        - { src: '../files/node-{{ ansible_hostname }}.key', dest: '/etc/flocker/node.key' }
+        - { src: '../files/node-{{ ansible_hostname }}.crt', dest: '/etc/flocker/node.crt' }
 
     - raw: "yes | ufw enable"
     - raw: "echo 'docker                  2376/tcp               # Docker' >> /etc/services"

@@ -9,7 +9,7 @@ if ! command_exists flocker-ca; then
     exit 1
 fi
 
-if [ -d certs ]; then
+if [ ! -d certs ]; then
     mkdir certs >/dev/null 2>&1
 fi
 
